@@ -1,0 +1,27 @@
+dovtk-lassing is a general framework for doing annotations in gtk.
+
+See the file test-dovtk-lasso.c for an example of how to use. It 
+draws a caliper like measurement device.
+
+This is work in progress based on the following email that I wrote:
+
+gtk-app-devel-list@gnome.org
+date	Tue, Aug 10, 2010 at 23:14
+subject	Re: porting gdk -> cairo
+
+
+The following more complex solution should take care of flickering:
+
+Preparation:
+
+    * Create an expose handle that is called after the default expose handle which uses cairo to draw a rectangle in coordinates determined by structure R (see below). Note that this expose handle will be called up to eight times every time a motion notify event occurs.
+    * Create a fifo buffer containing up to eight CairoRectangles to be exposed.
+
+During motion:
+
+    * Define the new rectangle to draw by button-press and motion-notify events and store it in the structure R available by the expose handle.
+    * Push four areas corresponding to the four edges of the rectangles to the fifo buffer.
+    * Expose the eight areas in the fifo buffer.
+    * Pop off the first four areas of the fifo buffer.
+
+This solution relies on the underlying expose handle. If that expose handle is slow (e.g. complex vector graphics), the solution may be made faster by initiating the process (e.g. at button-press) by copying the entire widget window to an off screen pixmap, and then block the underlying expose handle.
