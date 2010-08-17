@@ -41,7 +41,7 @@ void draw_caliper(cairo_t *cr,
 
     double calip_height = 50;
     cairo_move_to(cr, -dist/2+margin,calip_height/2+margin); 
-    double dy = -(calip_height+2*margin)/3;
+    double dy = -(calip_height+3*margin)/3;
     cairo_rel_curve_to(cr,
                        -15-2*margin,dy,
                        -15-2*margin,2.5*dy,
@@ -59,7 +59,13 @@ void draw_caliper(cairo_t *cr,
                   
     cairo_close_path(cr);
 
-    cairo_fill(cr);
+    if (do_mask) {
+        cairo_fill_preserve(cr);
+        cairo_set_line_width(cr, 5);
+        cairo_stroke(cr);
+    }
+    else 
+        cairo_fill(cr);
     
     // Draw the distance in the middle
     PangoFontDescription *font_descr = pango_font_description_from_string("Sans 15");
