@@ -121,6 +121,7 @@ int cb_expose(GtkWidget      *widget,
  */
 void my_lasso_draw(cairo_t *cr,
                    gboolean do_mask,
+                   gpointer user_data,
                    // output
                    DovtkLassoRectangleList **rect_list)
 {
