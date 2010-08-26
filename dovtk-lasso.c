@@ -17,6 +17,7 @@ typedef struct {
     DovtkLassoDrawing drawing_cb;
     gboolean do_calc_expose_from_cairo;
     DovtkLassoRectangleList *old_rect_list;
+    gpointer user_data;
 } DovtkLassoPrivate ;
 
 static int lasso_cb_expose(GtkWidget      *widget,
@@ -25,7 +26,8 @@ static int lasso_cb_expose(GtkWidget      *widget,
 
 DovtkLasso *dovtk_lasso_create(GtkWidget *widget,
                                DovtkLassoDrawing drawing_cb,
-                               gboolean do_calc_expose_from_cairo)
+                               gboolean do_calc_expose_from_cairo,
+                               gpointer user_data)
 {
     DovtkLassoPrivate *selfp = g_new0(DovtkLassoPrivate, 1);
     
@@ -39,6 +41,7 @@ DovtkLasso *dovtk_lasso_create(GtkWidget *widget,
     selfp->widget = widget;
     selfp->drawing_cb = drawing_cb;
     selfp->do_calc_expose_from_cairo = do_calc_expose_from_cairo;
+    selfp->user_data = user_data;
     // Create an empty list so that we can free it
     selfp->old_rect_list = dovtk_lasso_rectangle_list_new(0);
     return (DovtkLasso*)selfp;
@@ -78,7 +81,7 @@ static int lasso_cb_expose(GtkWidget      *widget,
     cairo_clip(cr);
 
     DovtkLassoRectangleList *rect_list = NULL;
-    selfp->drawing_cb(cr, FALSE, &rect_list);
+    selfp->drawing_cb(cr, FALSE, selfp->user_data, &rect_list);
 
     cairo_destroy(cr);
 
@@ -114,7 +117,7 @@ void dovtk_lasso_update(DovtkLasso *lasso)
         cairo_set_source_rgba(cr,0,0,0,1);
     }
     cairo_scale(cr,1.0/scale_factor,1.0/scale_factor);
-    selfp->drawing_cb(cr, TRUE, &rect_list);
+    selfp->drawing_cb(cr, TRUE, selfp->user_data, &rect_list);
 #if 0
     char filename[64];
     sprintf(filename, "/tmp/a8-%04d.png", a8_idx++);

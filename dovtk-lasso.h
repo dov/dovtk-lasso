@@ -23,12 +23,14 @@ typedef struct {
 
 typedef void (*DovtkLassoDrawing)(cairo_t *cr,
                                   gboolean do_mask,
+                                  gpointer userdata,
                                   // output
                                   DovtkLassoRectangleList **rect_list);
 
 DovtkLasso *dovtk_lasso_create(GtkWidget *widget,
                                DovtkLassoDrawing drawing_cb,
-                               gboolean do_calc_expose_from_cairo);
+                               gboolean do_calc_expose_from_cairo,
+                               gpointer user_data);
 
 /** 
  * Called when the coordinates of the lasso were changed.
@@ -40,5 +42,5 @@ void dovtk_lasso_update(DovtkLasso *lasso);
 void dovtk_lasso_destroy(DovtkLasso *lasso);
 
 DovtkLassoRectangleList *dovtk_lasso_rectangle_list_new(int num_rectangles);
-void dovtk_lasso_rectangle_list_destroy(DovtkLassoRectangleList *rectangcle_list);
+void dovtk_lasso_rectangle_list_destroy(DovtkLassoRectangleList *rectangle_list);
 #endif /* DOVTK */

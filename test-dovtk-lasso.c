@@ -152,7 +152,8 @@ int cb_button_press(GtkWidget      *widget,
 {
     lasso = dovtk_lasso_create(widget,
                                &my_lasso_draw,
-                               TRUE);
+                               TRUE,
+                               user_data);
     start_x = event->x;
     start_y = event->y;
     end_x = start_x;
