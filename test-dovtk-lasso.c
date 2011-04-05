@@ -121,8 +121,7 @@ int cb_expose(GtkWidget      *widget,
  */
 void my_lasso_draw(cairo_t *cr,
                    gboolean do_mask,
-                   // output
-                   DovtkLassoRectangleList **rect_list)
+                   gpointer user_data)
 {
     int min_x = MIN(start_x, end_x);
     int min_y = MIN(start_y, end_y);
@@ -152,7 +151,7 @@ int cb_button_press(GtkWidget      *widget,
 {
     lasso = dovtk_lasso_create(widget,
                                &my_lasso_draw,
-                               TRUE);
+                               NULL);
     start_x = event->x;
     start_y = event->y;
     end_x = start_x;

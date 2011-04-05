@@ -11,21 +11,28 @@
 #include "dovtk-lasso.h"
 
 typedef struct {
+    int num_rectangles;
+    cairo_rectangle_t *rectangles;
+} DovtkLassoRectangleList;
+
+typedef struct {
     DovtkLasso parent;
     gulong expose_handler_id;
     GtkWidget *widget;
     DovtkLassoDrawing drawing_cb;
-    gboolean do_calc_expose_from_cairo;
     DovtkLassoRectangleList *old_rect_list;
+    gpointer user_data;
 } DovtkLassoPrivate ;
 
 static int lasso_cb_expose(GtkWidget      *widget,
                            GdkEventExpose *event,
                            gpointer        user_data);
+static DovtkLassoRectangleList *dovtk_lasso_rectangle_list_new(int num_rectangles);
+static void dovtk_lasso_rectangle_list_destroy(DovtkLassoRectangleList *rectangcle_list);
 
 DovtkLasso *dovtk_lasso_create(GtkWidget *widget,
                                DovtkLassoDrawing drawing_cb,
-                               gboolean do_calc_expose_from_cairo)
+                               gpointer user_data)
 {
     DovtkLassoPrivate *selfp = g_new0(DovtkLassoPrivate, 1);
     
@@ -38,9 +45,9 @@ DovtkLasso *dovtk_lasso_create(GtkWidget *widget,
                                  selfp);
     selfp->widget = widget;
     selfp->drawing_cb = drawing_cb;
-    selfp->do_calc_expose_from_cairo = do_calc_expose_from_cairo;
     // Create an empty list so that we can free it
     selfp->old_rect_list = dovtk_lasso_rectangle_list_new(0);
+    selfp->user_data = user_data;
     return (DovtkLasso*)selfp;
 }
 
@@ -77,8 +84,7 @@ static int lasso_cb_expose(GtkWidget      *widget,
                     event->area.width, event->area.height);
     cairo_clip(cr);
 
-    DovtkLassoRectangleList *rect_list = NULL;
-    selfp->drawing_cb(cr, FALSE, &rect_list);
+    selfp->drawing_cb(cr, FALSE, selfp->user_data);
 
     cairo_destroy(cr);
 
@@ -103,50 +109,50 @@ void dovtk_lasso_update(DovtkLasso *lasso)
     cairo_t *cr = NULL;
     cairo_surface_t *surf = NULL;
 
-    if (selfp->do_calc_expose_from_cairo) {
-        surf=cairo_image_surface_create(CAIRO_FORMAT_ARGB32,
-                                        low_res_width,
-                                        low_res_height);
-        cr = cairo_create(surf);
-        cairo_set_source_rgba(cr,0,0,0,0);
-        cairo_rectangle(cr, 0,0,low_res_height,low_res_width);
-        cairo_fill(cr);
-        cairo_set_source_rgba(cr,0,0,0,1);
-    }
+    surf=cairo_image_surface_create(CAIRO_FORMAT_ARGB32,
+                                    low_res_width,
+                                    low_res_height);
+    cr = cairo_create(surf);
+    cairo_set_source_rgba(cr,0,0,0,0);
+    cairo_rectangle(cr, 0,0,low_res_height,low_res_width);
+    cairo_fill(cr);
+    cairo_set_source_rgba(cr,0,0,0,1);
+
     cairo_scale(cr,1.0/scale_factor,1.0/scale_factor);
-    selfp->drawing_cb(cr, TRUE, &rect_list);
+    selfp->drawing_cb(cr, TRUE, selfp->user_data);
 #if 0
     char filename[64];
     sprintf(filename, "/tmp/a8-%04d.png", a8_idx++);
     cairo_surface_write_to_png(surf, filename);
 #endif
 
-    // TBD - Turn surf into a list of rectangles
-    if (selfp->do_calc_expose_from_cairo) {
-        int row_idx, col_idx;
+    // Turn surf into a list of rectangles
+    int row_idx, col_idx;
 
-        // Allocate a lot of space
-        rect_list = dovtk_lasso_rectangle_list_new(low_res_width*low_res_height);
+    // Allocate a lot of space
+    rect_list = dovtk_lasso_rectangle_list_new(low_res_width*low_res_height);
 
-        guint8 *buf = cairo_image_surface_get_data(surf);
-        int rect_idx = 0;
-        int row_stride = cairo_image_surface_get_stride(surf);
-        for (row_idx=0; row_idx<low_res_height; row_idx++) {
-            for (col_idx=0; col_idx<low_res_width; col_idx++) {
-                if (*(buf + row_stride * row_idx + col_idx * 4+3) > 0) {
-                    cairo_rectangle_t *rect = &rect_list->rectangles[rect_idx++];
-                    rect->x = col_idx*scale_factor;
-                    rect->y = row_idx*scale_factor;
-                    rect->width = scale_factor;
-                    rect->height = scale_factor;
-                }
+    guint8 *buf = cairo_image_surface_get_data(surf);
+    int rect_idx = 0;
+    int row_stride = cairo_image_surface_get_stride(surf);
+    for (row_idx=0; row_idx<low_res_height; row_idx++) {
+        for (col_idx=0; col_idx<low_res_width; col_idx++) {
+            // Check if the tile is "dirty" and then add it to the
+            // rect list.
+            if (*(buf + row_stride * row_idx + col_idx * 4+3) > 0) {
+                cairo_rectangle_t *rect = &rect_list->rectangles[rect_idx++];
+                rect->x = col_idx*scale_factor;
+                rect->y = row_idx*scale_factor;
+                rect->width = scale_factor;
+                rect->height = scale_factor;
             }
         }
-        rect_list->num_rectangles = rect_idx;
-        
-        cairo_destroy(cr);
-        cairo_surface_destroy(surf);
     }
+    rect_list->num_rectangles = rect_idx;
+    
+    cairo_destroy(cr);
+    cairo_surface_destroy(surf);
+
     //    printf("num_rectangles = %d\n", rect_list->num_rectangles);
 
     // Build a list of expose rectangles from the old and the new lists.

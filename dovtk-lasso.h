@@ -13,22 +13,36 @@
 
 #include <gtk/gtk.h>
 
+/**
+ * Opaque handle for the lasso
+ * 
+ */
 typedef struct {
 } DovtkLasso;
 
-typedef struct {
-    int num_rectangles;
-    cairo_rectangle_t *rectangles;
-} DovtkLassoRectangleList;
-
+/** 
+ * Callback function for the lasso that paints the overlap. If
+ * do_mask is true, then the drawing alpha channel of the drawing
+ * will be used to determine whether the redraw that patch.
+ * Typically lines will be drawn thicker when mask is on in
+ * order to make sure that the corresponding patch is dirty.
+ * 
+ * @param DovtkLassoDrawing 
+ * 
+ * @return 
+ */
 typedef void (*DovtkLassoDrawing)(cairo_t *cr,
                                   gboolean do_mask,
-                                  // output
-                                  DovtkLassoRectangleList **rect_list);
+                                  gpointer user_data);
 
+
+/**
+ * Create a new lasso structure.
+ * 
+ */
 DovtkLasso *dovtk_lasso_create(GtkWidget *widget,
                                DovtkLassoDrawing drawing_cb,
-                               gboolean do_calc_expose_from_cairo);
+                               gpointer user_data);
 
 /** 
  * Called when the coordinates of the lasso were changed.
@@ -37,8 +51,11 @@ DovtkLasso *dovtk_lasso_create(GtkWidget *widget,
  */
 void dovtk_lasso_update(DovtkLasso *lasso);
 
+/** 
+ * Destroys a DovtkLasso object.
+ * 
+ * @param lasso 
+ */
 void dovtk_lasso_destroy(DovtkLasso *lasso);
 
-DovtkLassoRectangleList *dovtk_lasso_rectangle_list_new(int num_rectangles);
-void dovtk_lasso_rectangle_list_destroy(DovtkLassoRectangleList *rectangcle_list);
 #endif /* DOVTK */
