@@ -45,7 +45,6 @@ DovtkLasso *dovtk_lasso_create(GtkWidget *widget,
                                  selfp);
     selfp->widget = widget;
     selfp->drawing_cb = drawing_cb;
-    // Create an empty list so that we can free it
     selfp->old_rect_list = dovtk_lasso_rectangle_list_new(0);
     selfp->user_data = user_data;
     return (DovtkLasso*)selfp;
