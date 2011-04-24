@@ -1,0 +1,5 @@
+2011-04-21  Dov Grobgeld  <dov.grobgeld@gmail.com>
+
+        * dovtk-lasso.c, dovtk-lasso.h : Changed the do_mask variable
+        to a context variable as a preparation for picking.
+

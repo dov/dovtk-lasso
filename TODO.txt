@@ -1,0 +1,23 @@
+* <2011-04-21 Thu>
+** Idea for picking
+   - When having drawn an overlay picture, it is may have several hotzones that may be moved. This is known as "picking".
+   
+E.g. for a caliper
+
+      label = get_label_for_pixel(handler, x, y);
+      if (label == 1)
+        turn on moving of x0,y0
+      if (label == 2)
+        turn on moving of x1,y1
+      if (label == 3)
+        turn on moving of x0,y0,x1,y1
+        
+  - The label image is calculated on demand by creating a cropping context
+    and calling the Lasso Drawing callback.
+  - The lasso drawing callback uses functions set_color_by_label(). By default the label uses a A8 surface.
+      
+* <2011-04-24 Sun>
+** Ideas
+   - Exposure rectangles are known as *exprects*.
+   - New routine ~add_exprects_from_draw~. These will be discarded during the next ~update()~.
+   - new routine ~clear_exprects~.

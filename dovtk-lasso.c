@@ -119,11 +119,6 @@ void dovtk_lasso_update(DovtkLasso *lasso)
 
     cairo_scale(cr,1.0/scale_factor,1.0/scale_factor);
     selfp->drawing_cb(cr, TRUE, selfp->user_data);
-#if 0
-    char filename[64];
-    sprintf(filename, "/tmp/a8-%04d.png", a8_idx++);
-    cairo_surface_write_to_png(surf, filename);
-#endif
 
     // Turn surf into a list of rectangles
     int row_idx, col_idx;

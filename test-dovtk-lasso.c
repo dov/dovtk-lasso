@@ -12,15 +12,15 @@
 #include "dovtk-lasso.h"
 
 DovtkLasso *lasso = NULL;
-int start_x, start_y, end_x, end_y;
+int start_x=-1, start_y=-1, end_x=-1, end_y=-1;
 
 void draw_caliper(cairo_t *cr,
-                  gboolean do_mask,
+                  DovtkContext context,
                   double x0, double y0,
                   double x1, double y1)
 {
     int margin = 0;
-    if (do_mask)
+    if (context != DOVTK_CONTEXT_PAINT)
         margin = 5;
 
     double angle = atan2(y1-y0,x1-x0);
@@ -30,13 +30,14 @@ void draw_caliper(cairo_t *cr,
     cairo_rotate(cr, angle);
     double dist = sqrt((x1-x0)*(x1-x0) + (y1-y0)*(y1-y0));
 
-    if (!do_mask)
+    if (context == DOVTK_CONTEXT_PAINT)
         cairo_set_source_rgba(cr, 10*0x4d/255.0,1.0*0xaa/255.0,0,0.5);
+
     cairo_rectangle(cr, -dist/2-margin, -20-margin,
                     dist+2*margin, 20+2*margin);
     cairo_fill(cr);
 
-    if (!do_mask)
+    if (context == DOVTK_CONTEXT_PAINT)
         cairo_set_source_rgb(cr, 0x50/255.0,0x2d/255.0,0x16/255.0);
 
     double calip_height = 50;
@@ -59,7 +60,7 @@ void draw_caliper(cairo_t *cr,
                   
     cairo_close_path(cr);
 
-    if (do_mask) {
+    if (context == DOVTK_CONTEXT_MASK) {
         cairo_fill_preserve(cr);
         cairo_set_line_width(cr, 5);
         cairo_stroke(cr);
@@ -109,6 +110,9 @@ int cb_expose(GtkWidget      *widget,
         cairo_stroke(cr);
     }
 
+    if (start_x > 0)
+        draw_caliper(cr, DOVTK_CONTEXT_PAINT, start_x, start_y, end_x, end_y);
+                     
     cairo_destroy(cr);
         
    return FALSE;
@@ -120,25 +124,16 @@ int cb_expose(GtkWidget      *widget,
  * is thicker than the drawing. 
  */
 void my_lasso_draw(cairo_t *cr,
-                   gboolean do_mask,
+                   DovtkContext context,
                    gpointer user_data)
 {
     int min_x = MIN(start_x, end_x);
     int min_y = MIN(start_y, end_y);
 
-    if (!do_mask) {
-        cairo_set_source_rgb(cr, 1,0,0);
-        cairo_set_line_width(cr,1);
-    }
-    else
-        cairo_set_line_width(cr, 5);
-
-    cairo_set_line_cap(cr, CAIRO_LINE_CAP_ROUND);
-
     // Draw a rectangle
     //    cairo_rectangle(cr, min_x, min_y, abs(end_x-start_x), abs(end_y-start_y));
     draw_caliper(cr,
-                 do_mask,
+                 context,
                  start_x, start_y,
                  end_x, end_y);
 
@@ -149,9 +144,7 @@ int cb_button_press(GtkWidget      *widget,
                     GdkEventButton *event,
                     gpointer        user_data)
 {
-    lasso = dovtk_lasso_create(widget,
-                               &my_lasso_draw,
-                               NULL);
+
     start_x = event->x;
     start_y = event->y;
     end_x = start_x;
@@ -165,8 +158,6 @@ int cb_button_release(GtkWidget      *widget,
                       GdkEventButton *event,
                       gpointer        user_data)
 {
-    dovtk_lasso_destroy(lasso);
-    lasso = NULL;
     return FALSE;
 }
 
@@ -209,6 +200,10 @@ int main(int argc, char *argv[])
     g_signal_connect(G_OBJECT(w_draw), "motion-notify-event",
                      G_CALLBACK(cb_motion_notify), NULL);
     
+    lasso = dovtk_lasso_create(w_draw,
+                               &my_lasso_draw,
+                               NULL);
+
     gtk_widget_show_all(w_top);
     gtk_main();
 

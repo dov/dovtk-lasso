@@ -13,6 +13,24 @@
 
 #include <gtk/gtk.h>
 
+/** 
+ * The drawing callback is used for three purposes:
+ *
+ *  - Drawing a mask
+ *  - Drawing a label image (mapping of pixel to label). Used for
+ *    picking.
+ *  - Drawing the graphics
+ * 
+ * @param DovtkLassoDrawing 
+ * 
+ * @return 
+ */
+typedef enum {
+  DOVTK_CONTEXT_PAINT,
+  DOVTK_CONTEXT_MASK,
+  DOVTK_CONTEXT_LABEL
+} DovtkContext;
+  
 /**
  * Opaque handle for the lasso
  * 
@@ -22,17 +40,17 @@ typedef struct {
 
 /** 
  * Callback function for the lasso that paints the overlap. If
- * do_mask is true, then the drawing alpha channel of the drawing
- * will be used to determine whether the redraw that patch.
- * Typically lines will be drawn thicker when mask is on in
- * order to make sure that the corresponding patch is dirty.
+ * context == DOVTK_CONTEXT_MASK, then the drawing alpha channel
+ * of the drawing will be used to determine whether the redraw
+ * that patch. Typically lines will be drawn thicker when mask is
+ * on in order to make sure that the corresponding patch is dirty.
  * 
  * @param DovtkLassoDrawing 
  * 
  * @return 
  */
 typedef void (*DovtkLassoDrawing)(cairo_t *cr,
-                                  gboolean do_mask,
+                                  DovtkContext Context,
                                   gpointer user_data);
 
 
