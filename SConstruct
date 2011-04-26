@@ -1,4 +1,4 @@
-env = Environment()
+env = Environment(CFLAGS=['-Wall','-g'])
 
 env.ParseConfig("pkg-config --cflags --libs gtk+-2.0")
 

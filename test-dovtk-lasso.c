@@ -13,6 +13,9 @@
 
 DovtkLasso *lasso = NULL;
 int start_x=-1, start_y=-1, end_x=-1, end_y=-1;
+int picking_start_x=-1, picking_start_y=-1;
+gboolean is_defining_lasso = FALSE;
+int picking = -1;
 
 void draw_caliper(cairo_t *cr,
                   DovtkContext context,
@@ -20,7 +23,7 @@ void draw_caliper(cairo_t *cr,
                   double x1, double y1)
 {
     int margin = 0;
-    if (context != DOVTK_CONTEXT_PAINT)
+    if (context != DOVTK_LASSO_CONTEXT_PAINT)
         margin = 5;
 
     double angle = atan2(y1-y0,x1-x0);
@@ -30,15 +33,19 @@ void draw_caliper(cairo_t *cr,
     cairo_rotate(cr, angle);
     double dist = sqrt((x1-x0)*(x1-x0) + (y1-y0)*(y1-y0));
 
-    if (context == DOVTK_CONTEXT_PAINT)
+    if (context == DOVTK_LASSO_CONTEXT_PAINT)
         cairo_set_source_rgba(cr, 10*0x4d/255.0,1.0*0xaa/255.0,0,0.5);
-
+    else if (context == DOVTK_LASSO_CONTEXT_LABEL)
+        dovtk_lasso_set_color_label(lasso, cr, 1);
+    
     cairo_rectangle(cr, -dist/2-margin, -20-margin,
                     dist+2*margin, 20+2*margin);
     cairo_fill(cr);
 
-    if (context == DOVTK_CONTEXT_PAINT)
+    if (context == DOVTK_LASSO_CONTEXT_PAINT)
         cairo_set_source_rgb(cr, 0x50/255.0,0x2d/255.0,0x16/255.0);
+    else if (context == DOVTK_LASSO_CONTEXT_LABEL)
+        dovtk_lasso_set_color_label(lasso, cr, 2);
 
     double calip_height = 50;
     cairo_move_to(cr, -dist/2+margin,calip_height/2+margin); 
@@ -51,6 +58,13 @@ void draw_caliper(cairo_t *cr,
                   
     cairo_close_path(cr);
         
+    if (context == DOVTK_LASSO_CONTEXT_LABEL) {
+        cairo_fill_preserve(cr);
+        cairo_set_line_width(cr, 5);
+        cairo_stroke(cr);
+        dovtk_lasso_set_color_label(lasso, cr, 3);
+    }
+
     cairo_move_to(cr, dist/2-margin,calip_height/2+margin); 
     cairo_rel_curve_to(cr,
                        15+2*margin,dy,
@@ -60,13 +74,15 @@ void draw_caliper(cairo_t *cr,
                   
     cairo_close_path(cr);
 
-    if (context == DOVTK_CONTEXT_MASK) {
-        cairo_fill_preserve(cr);
-        cairo_set_line_width(cr, 5);
-        cairo_stroke(cr);
-    }
-    else 
+    if (context == DOVTK_LASSO_CONTEXT_PAINT) 
         cairo_fill(cr);
+    else {
+        cairo_fill_preserve(cr);
+        cairo_stroke(cr);
+
+        // No text drawing unless painting.
+        return;
+    }
     
     // Draw the distance in the middle
     PangoFontDescription *font_descr = pango_font_description_from_string("Sans 15");
@@ -99,8 +115,7 @@ int cb_expose(GtkWidget      *widget,
     y = widget->allocation.y + widget->allocation.height / 2;
 
     int i;
-    double radius_max = MIN (widget->allocation.width / 2,
-                             widget->allocation.height / 2)-5;
+
     for (i=0; i<10; i++) {
         double radius;
         radius =  50 * i;
@@ -111,7 +126,7 @@ int cb_expose(GtkWidget      *widget,
     }
 
     if (start_x > 0)
-        draw_caliper(cr, DOVTK_CONTEXT_PAINT, start_x, start_y, end_x, end_y);
+        draw_caliper(cr, DOVTK_LASSO_CONTEXT_PAINT, start_x, start_y, end_x, end_y);
                      
     cairo_destroy(cr);
         
@@ -127,9 +142,6 @@ void my_lasso_draw(cairo_t *cr,
                    DovtkContext context,
                    gpointer user_data)
 {
-    int min_x = MIN(start_x, end_x);
-    int min_y = MIN(start_y, end_y);
-
     // Draw a rectangle
     //    cairo_rectangle(cr, min_x, min_y, abs(end_x-start_x), abs(end_y-start_y));
     draw_caliper(cr,
@@ -144,12 +156,19 @@ int cb_button_press(GtkWidget      *widget,
                     GdkEventButton *event,
                     gpointer        user_data)
 {
-
-    start_x = event->x;
-    start_y = event->y;
-    end_x = start_x;
-    end_y = start_y;
-    dovtk_lasso_update(lasso);
+    picking = dovtk_lasso_get_label_for_pixel(lasso, event->x, event->y);
+    if (picking) {
+        picking_start_x = event->x;
+        picking_start_y = event->y;
+    }
+    else {
+        start_x = event->x;
+        start_y = event->y;
+        end_x = start_x;
+        end_y = start_y;
+        is_defining_lasso= TRUE;
+        dovtk_lasso_update(lasso);
+    }
 
     return FALSE;
 }
@@ -158,6 +177,8 @@ int cb_button_release(GtkWidget      *widget,
                       GdkEventButton *event,
                       gpointer        user_data)
 {
+    is_defining_lasso= FALSE;
+    picking = 0;
     return FALSE;
 }
 
@@ -165,11 +186,29 @@ int cb_motion_notify(GtkWidget      *widget,
                      GdkEventMotion *event,
                      gpointer        user_data)
 {
-    //    printf("button motion\n");
-    end_x = event->x;
-    end_y = event->y;
+    if (picking) {
+        int dx = event->x - picking_start_x;
+        int dy = event->y - picking_start_y;
+        if (picking == 1 || picking==2) {
+            start_x += dx;
+            start_y += dy;
+        }
+        if (picking == 1 || picking==3) {
+            end_x += dx;
+            end_y += dy;
+        }
+        picking_start_x = event->x;
+        picking_start_y = event->y;
+        dovtk_lasso_update(lasso);
+    }
+    else if (is_defining_lasso) {
+        //    printf("button motion\n");
+        end_x = event->x;
+        end_y = event->y;
 
-    dovtk_lasso_update(lasso);
+        dovtk_lasso_update(lasso);
+    }
+        
 
     return FALSE;
 }
@@ -209,3 +248,4 @@ int main(int argc, char *argv[])
 
     return 0;
 }
+

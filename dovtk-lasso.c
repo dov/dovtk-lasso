@@ -83,7 +83,7 @@ static int lasso_cb_expose(GtkWidget      *widget,
                     event->area.width, event->area.height);
     cairo_clip(cr);
 
-    selfp->drawing_cb(cr, FALSE, selfp->user_data);
+    selfp->drawing_cb(cr, DOVTK_LASSO_CONTEXT_PAINT, selfp->user_data);
 
     cairo_destroy(cr);
 
@@ -197,3 +197,38 @@ void dovtk_lasso_rectangle_list_destroy(DovtkLassoRectangleList *rectangle_list)
     g_free(rectangle_list->rectangles);
     g_free(rectangle_list);
 }
+
+int dovtk_lasso_get_label_for_pixel(DovtkLasso *lasso,
+                                    int col_idx, int row_idx)
+{
+    DovtkLassoPrivate *selfp = (DovtkLassoPrivate*)lasso;
+    cairo_t *cr = NULL;
+    cairo_surface_t *surf = NULL;
+
+    surf=cairo_image_surface_create(CAIRO_FORMAT_RGB24,1,1);
+    cr = cairo_create(surf);
+    cairo_translate(cr,-col_idx,-row_idx);
+    
+    cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
+
+    selfp->drawing_cb(cr, DOVTK_LASSO_CONTEXT_LABEL, selfp->user_data);
+
+    guint8 *buf = cairo_image_surface_get_data(surf);
+    int label = buf[2]+256*buf[1]+256*256*buf[0];
+    cairo_destroy(cr);
+    cairo_surface_destroy(surf);
+    return label;
+}
+
+void dovtk_lasso_set_color_label(DovtkLasso *lasso,
+                                cairo_t *cr,
+                                int label)
+{
+    double rr = 1.0*label/255;
+    double gg = (1.0*(label>>8))/255;
+    double bb = (1.0*(label>>16))/2550;
+
+    cairo_set_source_rgb(cr,rr,gg,bb);
+}
+
+
