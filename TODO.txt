@@ -1,6 +1,6 @@
 * <2011-04-21 Thu>
-** Idea for picking
-   - When having drawn an overlay picture, it is may have several hotzones that may be moved. This is known as "picking".
+** Idea for picking *DONE!*
+   - When having drawn an overlay picture, it is may have several hot zones that may be moved. This is known as "picking".
    
 E.g. for a caliper
 

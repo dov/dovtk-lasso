@@ -29,7 +29,7 @@ typedef enum {
   DOVTK_LASSO_CONTEXT_PAINT,
   DOVTK_LASSO_CONTEXT_MASK,
   DOVTK_LASSO_CONTEXT_LABEL
-} DovtkContext;
+} DovtkLassoContext;
   
 /**
  * Opaque handle for the lasso
@@ -50,7 +50,7 @@ typedef struct {
  * @return 
  */
 typedef void (*DovtkLassoDrawing)(cairo_t *cr,
-                                  DovtkContext Context,
+                                  DovtkLassoContext Context,
                                   gpointer user_data);
 
 
@@ -76,6 +76,20 @@ void dovtk_lasso_update(DovtkLasso *lasso);
  */
 void dovtk_lasso_destroy(DovtkLasso *lasso);
 
+/** 
+ * Discards all the exprects.
+ * 
+ * @param lasso 
+ */
+void dovtk_lasso_clear_exprects(DovtkLasso *lasso);
+
+/** 
+ * Create exprects from the current callback
+ * 
+ * @param lasso 
+ */
+void dovtk_lasso_add_exprects_from_drawing_cb(DovtkLasso *lasso);
+
 /**
  * Get label for a pixel according to the current drawing routine.
  */
@@ -88,4 +102,5 @@ int dovtk_lasso_get_label_for_pixel(DovtkLasso *lasso,
 void dovtk_lasso_set_color_label(DovtkLasso *lasso,
                                  cairo_t *cr,
                                  int label);
+
 #endif /* DOVTK */

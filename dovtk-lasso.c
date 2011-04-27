@@ -63,6 +63,13 @@ void dovtk_lasso_destroy(DovtkLasso *lasso)
     g_free(lasso);
 }
 
+void dovtk_lasso_clear_exprects(DovtkLasso *lasso)
+{
+    DovtkLassoPrivate *selfp = (DovtkLassoPrivate*)lasso;
+    dovtk_lasso_rectangle_list_destroy(selfp->old_rect_list);
+    selfp->old_rect_list = dovtk_lasso_rectangle_list_new(0);
+}
+
 static int lasso_cb_expose(GtkWidget      *widget,
                            GdkEventExpose *event,
                            gpointer        user_data)
@@ -92,18 +99,14 @@ static int lasso_cb_expose(GtkWidget      *widget,
 
 int a8_idx=0;
 
-void dovtk_lasso_update(DovtkLasso *lasso)
+static DovtkLassoRectangleList *get_exprects_from_drawing(DovtkLassoPrivate *selfp)
 {
-    DovtkLassoPrivate *selfp = (DovtkLassoPrivate*)lasso;
-
     // Call drawing_cb to and use it to generate the rectangle list
     DovtkLassoRectangleList *rect_list = NULL;
     int scale_factor = 32;
     int low_res_width = (selfp->widget->allocation.width+scale_factor-1) / scale_factor;
     int low_res_height = (selfp->widget->allocation.height+scale_factor-1) / scale_factor;
     
-    int i;
-
     // This should be created in the creation of DovtkLasso
     cairo_t *cr = NULL;
     cairo_surface_t *surf = NULL;
@@ -147,20 +150,38 @@ void dovtk_lasso_update(DovtkLasso *lasso)
     cairo_destroy(cr);
     cairo_surface_destroy(surf);
 
-    //    printf("num_rectangles = %d\n", rect_list->num_rectangles);
+    return rect_list;
+}
+
+static DovtkLassoRectangleList *rect_cat(DovtkLassoRectangleList *rect1,
+                                         DovtkLassoRectangleList *rect2)
+{
+    int num_rects1 = rect1->num_rectangles;
+    int num_rects2 = rect2->num_rectangles;
+    DovtkLassoRectangleList *rect_list
+        = dovtk_lasso_rectangle_list_new(num_rects1+num_rects2);
+    int i;
+    for (i=0; i<num_rects1; i++) 
+        rect_list->rectangles[i] = rect1->rectangles[i];
+    for (i=0; i<num_rects2; i++)
+        rect_list->rectangles[num_rects1 + i] = rect2->rectangles[i];
+    return rect_list;
+}
+
+void dovtk_lasso_update(DovtkLasso *lasso)
+{
+    DovtkLassoPrivate *selfp = (DovtkLassoPrivate*)lasso;
+
+    // Call drawing_cb to and use it to generate the rectangle list
+    DovtkLassoRectangleList *rect_list = get_exprects_from_drawing(selfp);
 
     // Build a list of expose rectangles from the old and the new lists.
     // Better done as a linked list.
     DovtkLassoRectangleList *expose_rect_list
-        = dovtk_lasso_rectangle_list_new(selfp->old_rect_list->num_rectangles
-                                         + rect_list->num_rectangles);
-    int num_old_rects = selfp->old_rect_list->num_rectangles;
-    for (i=0; i<num_old_rects; i++) 
-        expose_rect_list->rectangles[i] = selfp->old_rect_list->rectangles[i];
-    for (i=0; i<rect_list->num_rectangles; i++)
-        expose_rect_list->rectangles[num_old_rects + i] = rect_list->rectangles[i];
+        = rect_cat(selfp->old_rect_list, rect_list);
 
     // Expose the old and the new list of rectangles!
+    int i;
     for (i=0; i<expose_rect_list->num_rectangles; i++) {
         // Shortcut
         cairo_rectangle_t *lasso_rect = &expose_rect_list->rectangles[i];
@@ -220,15 +241,36 @@ int dovtk_lasso_get_label_for_pixel(DovtkLasso *lasso,
     return label;
 }
 
+/** 
+ * The label is encoded in the RGB image by its color.
+ * 
+ * @param lasso 
+ * @param cr 
+ * @param label 
+ */
 void dovtk_lasso_set_color_label(DovtkLasso *lasso,
                                 cairo_t *cr,
                                 int label)
 {
     double rr = 1.0*label/255;
     double gg = (1.0*(label>>8))/255;
-    double bb = (1.0*(label>>16))/2550;
+    double bb = (1.0*(label>>16))/255;
 
     cairo_set_source_rgb(cr,rr,gg,bb);
 }
 
-
+/** 
+ * Use the drawing routine to add more rects list without exposing
+ * the drawing.
+ * 
+ * @param lasso 
+ */
+void dovtk_lasso_add_exprects_from_drawing_cb(DovtkLasso *lasso)
+{
+    DovtkLassoPrivate *selfp = (DovtkLassoPrivate*)lasso;
+    DovtkLassoRectangleList *rect_list = get_exprects_from_drawing(selfp);
+    DovtkLassoRectangleList *new_rect_list = rect_cat(selfp->old_rect_list,
+                                                      rect_list);
+    dovtk_lasso_rectangle_list_destroy(selfp->old_rect_list);
+    selfp->old_rect_list = new_rect_list;
+}

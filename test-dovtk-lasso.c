@@ -18,7 +18,7 @@ gboolean is_defining_lasso = FALSE;
 int picking = -1;
 
 void draw_caliper(cairo_t *cr,
-                  DovtkContext context,
+                  DovtkLassoContext context,
                   double x0, double y0,
                   double x1, double y1)
 {
@@ -77,26 +77,26 @@ void draw_caliper(cairo_t *cr,
     if (context == DOVTK_LASSO_CONTEXT_PAINT) 
         cairo_fill(cr);
     else {
+        cairo_set_line_width(cr, 5);
         cairo_fill_preserve(cr);
         cairo_stroke(cr);
-
-        // No text drawing unless painting.
-        return;
     }
     
-    // Draw the distance in the middle
-    PangoFontDescription *font_descr = pango_font_description_from_string("Sans 15");
-    PangoLayout *pango_layout = pango_cairo_create_layout(cr);
-    pango_layout_set_font_description(pango_layout, font_descr);
-    gchar *dist_str = g_strdup_printf("%.1f", dist);
-    pango_layout_set_text(pango_layout, dist_str, -1);
-    int layout_width, layout_height;
-    pango_layout_get_size(pango_layout, &layout_width, &layout_height);
-
-    cairo_move_to(cr, -0.5*layout_width/PANGO_SCALE,-20);
-    pango_cairo_show_layout(cr, pango_layout);
-    g_object_unref(pango_layout);
-    pango_font_description_free(font_descr);
+    if (context != DOVTK_LASSO_CONTEXT_LABEL) {
+        // Draw the distance in the middle
+        PangoFontDescription *font_descr = pango_font_description_from_string("Sans 15");
+        PangoLayout *pango_layout = pango_cairo_create_layout(cr);
+        pango_layout_set_font_description(pango_layout, font_descr);
+        gchar *dist_str = g_strdup_printf("%.1f", dist);
+        pango_layout_set_text(pango_layout, dist_str, -1);
+        int layout_width, layout_height;
+        pango_layout_get_size(pango_layout, &layout_width, &layout_height);
+    
+        cairo_move_to(cr, -0.5*layout_width/PANGO_SCALE,-20);
+        pango_cairo_show_layout(cr, pango_layout);
+        g_object_unref(pango_layout);
+        pango_font_description_free(font_descr);
+      }
 }
 
 int cb_expose(GtkWidget      *widget,
@@ -125,7 +125,7 @@ int cb_expose(GtkWidget      *widget,
         cairo_stroke(cr);
     }
 
-    if (start_x > 0)
+    if (start_x >= 0)
         draw_caliper(cr, DOVTK_LASSO_CONTEXT_PAINT, start_x, start_y, end_x, end_y);
                      
     cairo_destroy(cr);
@@ -139,15 +139,16 @@ int cb_expose(GtkWidget      *widget,
  * is thicker than the drawing. 
  */
 void my_lasso_draw(cairo_t *cr,
-                   DovtkContext context,
+                   DovtkLassoContext context,
                    gpointer user_data)
 {
     // Draw a rectangle
     //    cairo_rectangle(cr, min_x, min_y, abs(end_x-start_x), abs(end_y-start_y));
-    draw_caliper(cr,
-                 context,
-                 start_x, start_y,
-                 end_x, end_y);
+    if (start_x>0)
+        draw_caliper(cr,
+                     context,
+                     start_x, start_y,
+                     end_x, end_y);
 
     cairo_stroke(cr);
 }

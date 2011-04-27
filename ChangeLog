@@ -1,3 +1,9 @@
+2011-04-27  Dov Grobgeld  <dov.grobgeld@gmail.com>
+
+        * dovtk-lasso.c, dovtk-lasso.h : Split generation of
+        exprects and added routine for adding exprects from drawing
+        without exposing.
+
 2011-04-26  Dov Grobgeld  <dov.grobgeld@gmail.com>
 
         * dovtk-lasso.c, dovtk-lasso.h, test-dovtk.c : Infrastructure
