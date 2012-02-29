@@ -1,4 +1,4 @@
-dovtk-lassing is a general framework for doing annotations in gtk.
+dovtk-lasso is a general framework for doing annotations in gtk.
 
 See the file test-dovtk-lasso.c for an example of how to use. It 
 draws a caliper like measurement device.
