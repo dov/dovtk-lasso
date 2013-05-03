@@ -12,11 +12,16 @@
 #include "dovtk-lasso.h"
 
 DovtkLasso *lasso = NULL;
-int start_x=-1, start_y=-1, end_x=-1, end_y=-1;
-int picking_start_x=-1, picking_start_y=-1;
+double start_x=-HUGE, start_y=-HUGE, end_x=-HUGE, end_y=-HUGE;
+double picking_start_x=-1, picking_start_y=-1;
 gboolean is_defining_lasso = FALSE;
 int picking = -1;
 
+// This function either:
+// 
+//    1. Draws the caliper
+//    2. Creates a mask of the caliper
+//    3. Draw a label image indicated the sections of the caliper.
 void draw_caliper(cairo_t *cr,
                   DovtkLassoContext context,
                   double x0, double y0,
@@ -99,20 +104,14 @@ void draw_caliper(cairo_t *cr,
       }
 }
 
-int cb_expose(GtkWidget      *widget,
-              GdkEventExpose *event,
-              gpointer        user_data)
+int cb_draw(GtkWidget      *widget,
+            cairo_t        *cr,
+            gpointer        user_data)
 {
-    cairo_t *cr;
-    cr = gdk_cairo_create(widget->window);
-    cairo_rectangle(cr, event->area.x, event->area.y,
-                    event->area.width, event->area.height);
-    cairo_clip(cr);
-
     // Just draw anything in the widget
     double x, y;
-    x = widget->allocation.x + widget->allocation.width / 2;
-    y = widget->allocation.y + widget->allocation.height / 2;
+    x = gtk_widget_get_allocated_width(widget)/2;
+    y = gtk_widget_get_allocated_height(widget)/2;
 
     int i;
 
@@ -125,11 +124,9 @@ int cb_expose(GtkWidget      *widget,
         cairo_stroke(cr);
     }
 
-    if (start_x >= 0)
+    if (start_x >= -HUGE)
         draw_caliper(cr, DOVTK_LASSO_CONTEXT_PAINT, start_x, start_y, end_x, end_y);
                      
-    cairo_destroy(cr);
-        
    return FALSE;
 }
 
@@ -144,7 +141,7 @@ void my_lasso_draw(cairo_t *cr,
 {
     // Draw a rectangle
     //    cairo_rectangle(cr, min_x, min_y, abs(end_x-start_x), abs(end_y-start_y));
-    if (start_x>0)
+    if (start_x>=-HUGE)
         draw_caliper(cr,
                      context,
                      start_x, start_y,
@@ -188,8 +185,8 @@ int cb_motion_notify(GtkWidget      *widget,
                      gpointer        user_data)
 {
     if (picking) {
-        int dx = event->x - picking_start_x;
-        int dy = event->y - picking_start_y;
+        double dx = event->x - picking_start_x;
+        double dy = event->y - picking_start_y;
         if (picking == 1 || picking==2) {
             start_x += dx;
             start_y += dy;
@@ -225,8 +222,8 @@ int main(int argc, char *argv[])
     gtk_container_add(GTK_CONTAINER(w_top),
                       w_draw);
     gtk_widget_set_size_request(w_draw, 500,500);
-    g_signal_connect(G_OBJECT(w_draw), "expose-event",
-                     G_CALLBACK(cb_expose), NULL);
+    g_signal_connect(G_OBJECT(w_draw), "draw",
+                     G_CALLBACK(cb_draw), NULL);
                      
     // TBD - set up events for lasso
     gtk_widget_add_events(w_draw,
